@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>Data Operasi & OK Center</title>
+<meta name="theme-color" content="#4ecdc4">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app-shell">
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-icon">✚</div>
+    <div><strong>DATA OPERASI</strong><span>& OK CENTER</span></div>
+  </div>
+  <div class="nav-scroll">
+    <div class="nav-group"><div class="nav-label">UTAMA</div>
+      <button class="nav-item active" data-page="dashboard">⌂ <span>Dashboard</span></button>
+    </div>
+    <div class="nav-group"><div class="nav-label">DATA OPERASI</div>
+      <button class="nav-item" data-page="input">＋ <span>Input Operasi</span></button>
+      <button class="nav-item" data-page="operations">▤ <span>Daftar Operasi</span></button>
+      <button class="nav-item" data-page="import">⇩ <span>Import Excel/CSV</span></button>
+    </div>
+    <div class="nav-group"><div class="nav-label">DOKUMEN</div>
+      <button class="nav-item" data-page="notadinas">✉ <span>Nota Dinas</span></button>
+    </div>
+    <div class="nav-group"><div class="nav-label">MASTER DATA</div>
+      <button class="nav-item" data-page="employees">♙ <span>Data Pegawai</span></button>
+    </div>
+    <div class="nav-group"><div class="nav-label">INVENTARIS OK</div>
+      <button class="nav-item" data-page="inventory">▤ <span>Inventaris</span></button>
+    </div>
+    <div class="nav-group"><div class="nav-label">ALKES</div>
+      <button class="nav-item" data-page="stock">▥ <span>Stok Alkes</span></button>
+      <button class="nav-item" data-page="stockin">＋ <span>Barang Masuk</span></button>
+      <button class="nav-item" data-page="stockout">− <span>Barang Keluar</span></button>
+      <button class="nav-item" data-page="shortage">! <span>Kekurangan</span></button>
+      <button class="nav-item" data-page="requests">▱ <span>Permintaan</span></button>
+    </div>
+    <div class="nav-group"><div class="nav-label">LAPORAN</div>
+      <button class="nav-item" data-page="daily">▤ <span>Operasi Harian</span></button>
+      <button class="nav-item" data-page="monthly">▤ <span>Operasi Bulanan</span></button>
+      <button class="nav-item" data-page="bedah">▦ <span>Bedah</span></button>
+      <button class="nav-item" data-page="anestesi">◉ <span>Anestesi</span></button>
+      <button class="nav-item" data-page="inventory-report">▤ <span>Inventaris</span></button>
+      <button class="nav-item" data-page="alkes-report">▥ <span>Alkes</span></button>
+    </div>
+    <div class="nav-group admin-only"><div class="nav-label">PENGATURAN</div>
+      <button class="nav-item" data-page="settings">⚙ <span>Backup & Restore</span></button>
+      <button class="nav-item" data-page="reset">↺ <span>Reset Data</span></button>
+    </div>
+  </div>
+  <div class="sidebar-foot">Data Operasi & OK Center<br><small>Local data • siap dihubungkan Laravel + MySQL</small></div>
+</aside>
+<main class="main">
+<header class="topbar">
+  <div class="top-left">
+    <button class="hamburger" id="sidebarToggle" title="Sembunyikan/Tampilkan menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div>
+      <p class="eyebrow">SISTEM MANAJEMEN OPERASI & KAMAR OPERASI</p>
+      <h1 id="pageTitle">Dashboard</h1>
+    </div>
+  </div>
+  <div class="top-actions">
+    <span class="status-dot">● Sistem aktif</span>
+    <button class="primary" data-page-jump="input">＋ Input Operasi</button>
+    <button class="ghost" id="logoutBtn">⏻ Logout</button>
+  </div>
+</header>
+<div id="pages"></div>
+</main>
+</div>
+<div id="toast"></div>
+<dialog id="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="modalTitle">Form</h2>
+      <button id="modalClose">×</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</dialog>
+<script src="app.js"></script>
+</body>
+</html>
