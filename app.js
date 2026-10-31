@@ -90,18 +90,9 @@ function renderLogin(){
   };
 }
 
-/* ============ STATE ============ */
-let state=JSON.parse(localStorage.getItem(STORE)||"null")||{};
-["operations","employees","medical","inventory","stockIn","stockOut","requests","notaDinas"].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[]});
-state.operations=state.operations.map(o=>({id:o.id||uid(),...o}));
-if(!state.employees.length){
-  state.employees=defaultEmployees.map(e=>({id:uid(),status:"Aktif",kompetensi:"",...e}));
-}else{
-  state.employees=state.employees.map(e=>({id:e.id||uid(),name:e.name||"",profession:e.profession||e.role||"",status:e.status||"Aktif",kompetensi:e.kompetensi||"",room:opRooms.includes(e.room)?e.room:opRooms[0]}));
-}
-state.medical=state.medical.map(m=>({id:m.id||uid(),type:m.type||"BHP",name:m.name||"",code:m.code||"",unit:m.unit||"",min:+m.min||0,status:m.status||"Aktif"}));
-if(!state.notaDinas.length){
-  state.notaDinas=[{
+/* ============ STATE & GOOGLE SHEETS SYNC ============ */
+function createDefaultNotaDinas(){
+  return [{
     id:uid(),
     kepada:"[Nama Jabatan/Unit Penerima]",
     dari:"[Nama Jabatan/Unit Pengirim]",
@@ -126,10 +117,186 @@ if(!state.notaDinas.length){
   }];
 }
 
+function normalizeStateData(raw){
+  const data=(raw && typeof raw==="object")?{...raw}:{};
+  ["operations","employees","medical","inventory","stockIn","stockOut","requests","notaDinas"].forEach(k=>{
+    if(!Array.isArray(data[k]))data[k]=[];
+  });
+  data.operations=data.operations.map(o=>({id:o.id||uid(),...o}));
+  if(!data.employees.length){
+    data.employees=defaultEmployees.map(e=>({id:uid(),status:"Aktif",kompetensi:"",...e}));
+  }else{
+    data.employees=data.employees.map(e=>({
+      id:e.id||uid(),name:e.name||"",profession:e.profession||e.role||"",
+      status:e.status||"Aktif",kompetensi:e.kompetensi||"",
+      room:opRooms.includes(e.room)?e.room:opRooms[0]
+    }));
+  }
+  data.medical=data.medical.map(m=>({
+    id:m.id||uid(),type:m.type||"BHP",name:m.name||"",code:m.code||"",
+    unit:m.unit||"",min:+m.min||0,status:m.status||"Aktif"
+  }));
+  if(!data.notaDinas.length)data.notaDinas=createDefaultNotaDinas();
+  return data;
+}
+
+/*
+ * GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE APPS SCRIPT YANG BERAKHIR /exec.
+ * Contoh: https://script.google.com/macros/s/AKfycbxxxxxxxx/exec
+ */
+const GOOGLE_SHEETS_API_URL="PASTE_WEB_APP_EXEC_URL_HERE";
+const API_MESSAGE_CHANNEL="OKCENTER_SHEETS_API";
+const cloudMode=/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(GOOGLE_SHEETS_API_URL);
+let cloudReady=false;
+let cloudRevision=0;
+let cloudSaveQueue=Promise.resolve();
+
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let currentPage="dashboard";
+let state=normalizeStateData(JSON.parse(localStorage.getItem(STORE)||"null")||{});
 
-function persist(){localStorage.setItem(STORE,JSON.stringify(state))}
+function setSyncStatus(message,detail=""){
+  const el=document.getElementById("syncStatus");
+  if(el){el.textContent="● "+message;el.title=detail||message;}
+  const link=document.getElementById("sheetLink");
+  if(link&&/^https:\/\//.test(detail)){
+    link.href=detail;
+    link.hidden=false;
+  }
+}
+
+/*
+ * GitHub Pages tidak memiliki google.script.run. Komunikasi dilakukan melalui
+ * form POST ke Apps Script dengan iframe tersembunyi dan balasan postMessage.
+ */
+function callSheetsApi(action,payload={}){
+  return new Promise((resolve,reject)=>{
+    if(!cloudMode){reject(new Error("URL Google Apps Script belum dipasang di app.js."));return;}
+
+    const requestId=uid();
+    const frame=document.createElement("iframe");
+    frame.name="okc_api_"+requestId;
+    frame.style.display="none";
+    frame.setAttribute("aria-hidden","true");
+
+    const form=document.createElement("form");
+    form.method="POST";
+    form.action=GOOGLE_SHEETS_API_URL;
+    form.target=frame.name;
+    form.style.display="none";
+
+    const addField=(name,value)=>{
+      const input=document.createElement("input");
+      input.type="hidden";
+      input.name=name;
+      input.value=value;
+      form.appendChild(input);
+    };
+
+    addField("action",action);
+    addField("requestId",requestId);
+    if(action==="save")addField("payload",JSON.stringify(payload));
+
+    let finished=false;
+    const cleanup=()=>{
+      window.removeEventListener("message",onMessage);
+      clearTimeout(timeoutId);
+      form.remove();
+      frame.remove();
+    };
+    const finish=(fn,value)=>{
+      if(finished)return;
+      finished=true;
+      cleanup();
+      fn(value);
+    };
+    const onMessage=event=>{
+      if(event.source!==frame.contentWindow)return;
+      const data=event.data;
+      if(!data||data.channel!==API_MESSAGE_CHANNEL||data.requestId!==requestId)return;
+      if(data.ok)finish(resolve,data);
+      else finish(reject,new Error(data.error||"Google Apps Script mengembalikan kesalahan."));
+    };
+    const timeoutId=setTimeout(()=>{
+      finish(reject,new Error("Waktu koneksi ke Google Sheets habis. Periksa URL deployment dan akses Google."));
+    },60000);
+
+    window.addEventListener("message",onMessage);
+    document.body.appendChild(frame);
+    document.body.appendChild(form);
+    try{form.submit();}
+    catch(error){finish(reject,error);}
+  });
+}
+
+function persist(){
+  const snapshot=JSON.parse(JSON.stringify(state));
+  try{localStorage.setItem(STORE,JSON.stringify(snapshot));}
+  catch(error){console.warn("Backup lokal gagal:",error);}
+
+  if(!cloudMode||!cloudReady)return Promise.resolve({local:true});
+
+  // Antrikan penyimpanan agar urutan klik tidak menyebabkan data tertimpa.
+  cloudSaveQueue=cloudSaveQueue.catch(()=>{}).then(()=>
+    callSheetsApi("save",{state:snapshot,expectedRevision:cloudRevision})
+      .then(result=>{
+        cloudRevision=Number(result.revision||cloudRevision);
+        setSyncStatus("Tersimpan di Google Sheets",result.spreadsheetUrl||"");
+        return result;
+      })
+      .catch(error=>{
+        const message=error&&error.message?error.message:String(error);
+        setSyncStatus("Gagal sinkron",message);
+        toast("Gagal menyimpan ke Google Sheets: "+message);
+        throw error;
+      })
+  );
+  return cloudSaveQueue;
+}
+
+function initCloudDatabase(){
+  if(!cloudMode){
+    setSyncStatus("Mode lokal — URL API belum dipasang");
+    navigate("dashboard");
+    return;
+  }
+
+  setSyncStatus("Menghubungkan ke Google Sheets...");
+  callSheetsApi("read")
+    .then(result=>{
+      cloudRevision=Number(result.revision||0);
+      if(result.spreadsheetUrl){
+        const link=document.getElementById("sheetLink");
+        if(link){link.href=result.spreadsheetUrl;link.hidden=false;}
+      }
+
+      if(result.hasData){
+        // Google Sheets menjadi sumber data utama setelah berhasil terhubung.
+        state=normalizeStateData(result.state||{});
+        try{localStorage.setItem(STORE,JSON.stringify(state));}catch(error){}
+        cloudReady=true;
+        setSyncStatus("Terhubung ke Google Sheets",result.spreadsheetUrl||"");
+        navigate("dashboard");
+      }else{
+        // Database baru: isi awal dari data lokal/default aplikasi.
+        cloudReady=true;
+        setSyncStatus("Menyiapkan database Google Sheets...");
+        persist().then(()=>{
+          setSyncStatus("Database siap",result.spreadsheetUrl||"");
+          navigate("dashboard");
+        }).catch(()=>navigate("dashboard"));
+      }
+    })
+    .catch(error=>{
+      const message=error&&error.message?error.message:String(error);
+      cloudReady=false;
+      setSyncStatus("Koneksi Google Sheets gagal",message);
+      toast("Database Google Sheets belum dapat diakses: "+message);
+      // Aplikasi tetap terbuka dengan backup lokal; status menunjukkan belum sinkron.
+      navigate("dashboard");
+    });
+}
+
 function pad(n){return String(n).padStart(2,"0")}
 function today(){let d=new Date();return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()}`}
 function todayLong(){
@@ -1375,7 +1542,11 @@ window.openRequestModal=()=>{
 
 function backup(){let blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-data-operasi-ok-'+today()+'.json';a.click();URL.revokeObjectURL(a.href);toast('Backup berhasil dibuat')}
 function restore(){let f=$("#restoreFile")?.files?.[0];if(!f)return toast('Pilih file backup JSON terlebih dahulu');let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.operations||!Array.isArray(d.operations))throw Error('Struktur backup tidak valid');state=d;["operations","employees","medical","inventory","stockIn","stockOut","requests","notaDinas"].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[]});persist();toast('Restore berhasil');navigate('dashboard')}catch(e){toast('File backup tidak valid')}};r.readAsText(f)}
-function resetAll(){if(confirm('PERINGATAN: seluruh data aplikasi akan dihapus. Lanjutkan?')){localStorage.removeItem(STORE);location.reload()}}
+function resetAll(){
+  if(!confirm('PERINGATAN: seluruh data aplikasi akan dihapus. Lanjutkan?'))return;
+  state=normalizeStateData({});
+  persist().then(()=>location.reload()).catch(()=>toast('Reset lokal selesai, tetapi sinkronisasi cloud gagal.'));
+}
 function exportRows(rows,name){if(!window.XLSX)return toast('Library Excel belum tersedia');let out=rows.map(r=>{let o={};fields.forEach(f=>o[labels[f]]=r[f]||'');return o});let ws=XLSX.utils.json_to_sheet(out),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Operasi');XLSX.writeFile(wb,name)}
 
 /* ============ IMPORT (FIXED & COMPLETE) ============ */
@@ -1689,5 +1860,5 @@ if(!isLoggedIn()){
   if(!isAdmin()) document.body.classList.add("role-user");
   bindGlobal();
   applyRoleNav();
-  navigate('dashboard');
+  initCloudDatabase();
 }
