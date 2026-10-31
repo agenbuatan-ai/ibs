@@ -144,7 +144,7 @@ function normalizeStateData(raw){
  * GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE APPS SCRIPT YANG BERAKHIR /exec.
  * Contoh: https://script.google.com/macros/s/AKfycbxxxxxxxx/exec
  */
-const GOOGLE_SHEETS_API_URL="1wwQhhjG1BJeSR4xc-KKKZRKmuZ5hOlRJuDqemobsu0c";
+const GOOGLE_SHEETS_API_URL="AKfycbw_6xWw-taAkgRIXhTQPbFeUuQtLuvfi7gxVplf7vZhvyOFwo0rhpxJWUDfNap26eoy";
 const API_MESSAGE_CHANNEL="OKCENTER_SHEETS_API";
 const cloudMode=/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(GOOGLE_SHEETS_API_URL);
 let cloudReady=false;
