@@ -144,7 +144,7 @@ function normalizeStateData(raw){
  * GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE APPS SCRIPT YANG BERAKHIR /exec.
  * Contoh: https://script.google.com/macros/s/AKfycbxxxxxxxx/exec
  */
-const GOOGLE_SHEETS_API_URL="https://script.google.com/macros/s/AKfycbz9ZFLWT8HudmZSEoZIyDVgeGOLxL8HYzlXSnjCyoLkDLw8AUFv3mfee5FhzoZ_gR21/exec";
+const GOOGLE_SHEETS_API_URL="https://script.google.com/macros/s/AKfycbygp3ff0lOjRCG2lRt00HsntL1TzMlMxN0piutvq-RBf4cxeN9LxewEDCboXfTNNjQv/exec";
 const API_MESSAGE_CHANNEL="OKCENTER_SHEETS_API";
 const cloudMode=/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(GOOGLE_SHEETS_API_URL);
 let cloudReady=false;
@@ -166,67 +166,61 @@ function setSyncStatus(message,detail=""){
 }
 
 /*
- * GitHub Pages tidak memiliki google.script.run. Komunikasi dilakukan melalui
- * form POST ke Apps Script dengan iframe tersembunyi dan balasan postMessage.
+ * Komunikasi ke Google Apps Script menggunakan fetch() dengan metode GET (read)
+ * dan POST (save). Apps Script harus mengembalikan JSON dengan header CORS.
+ * Fallback: jika fetch gagal karena redirect CORS (Apps Script kadang redirect),
+ * coba ulang dengan no-cors + polling tidak didukung — gunakan GET params saja.
  */
 function callSheetsApi(action,payload={}){
-  return new Promise((resolve,reject)=>{
-    if(!cloudMode){reject(new Error("URL Google Apps Script belum dipasang di app.js."));return;}
+  if(!cloudMode){return Promise.reject(new Error("URL Google Apps Script belum dipasang di app.js."));}
 
-    const requestId=uid();
-    const frame=document.createElement("iframe");
-    frame.name="okc_api_"+requestId;
-    frame.style.display="none";
-    frame.setAttribute("aria-hidden","true");
+  const controller=new AbortController();
+  const timeoutId=setTimeout(()=>controller.abort(),60000);
 
-    const form=document.createElement("form");
-    form.method="POST";
-    form.action=GOOGLE_SHEETS_API_URL;
-    form.target=frame.name;
-    form.style.display="none";
+  // Selalu sertakan action di URL query param agar tetap ada setelah redirect 302
+  // yang dilakukan Apps Script (redirect mengubah POST → GET dan body hilang).
+  // Untuk "save": kirim payload sebagai body text/plain (simple request, no preflight).
+  // Untuk "read": cukup GET biasa.
+  let fetchPromise;
+  if(action==="read"){
+    const url=new URL(GOOGLE_SHEETS_API_URL);
+    url.searchParams.set("action","read");
+    fetchPromise=fetch(url.toString(),{method:"GET",signal:controller.signal});
+  }else{
+    // text/plain tidak trigger CORS preflight & payload-nya aman lewat redirect
+    const url=new URL(GOOGLE_SHEETS_API_URL);
+    url.searchParams.set("action",action); // action di URL agar selamat dari redirect
+    fetchPromise=fetch(url.toString(),{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=UTF-8"},
+      body:JSON.stringify(payload),
+      signal:controller.signal
+    });
+  }
 
-    const addField=(name,value)=>{
-      const input=document.createElement("input");
-      input.type="hidden";
-      input.name=name;
-      input.value=value;
-      form.appendChild(input);
-    };
-
-    addField("action",action);
-    addField("requestId",requestId);
-    if(action==="save")addField("payload",JSON.stringify(payload));
-
-    let finished=false;
-    const cleanup=()=>{
-      window.removeEventListener("message",onMessage);
+  return fetchPromise
+    .then(res=>{
       clearTimeout(timeoutId);
-      form.remove();
-      frame.remove();
-    };
-    const finish=(fn,value)=>{
-      if(finished)return;
-      finished=true;
-      cleanup();
-      fn(value);
-    };
-    const onMessage=event=>{
-      if(event.source!==frame.contentWindow)return;
-      const data=event.data;
-      if(!data||data.channel!==API_MESSAGE_CHANNEL||data.requestId!==requestId)return;
-      if(data.ok)finish(resolve,data);
-      else finish(reject,new Error(data.error||"Google Apps Script mengembalikan kesalahan."));
-    };
-    const timeoutId=setTimeout(()=>{
-      finish(reject,new Error("Waktu koneksi ke Google Sheets habis. Periksa URL deployment dan akses Google."));
-    },60000);
-
-    window.addEventListener("message",onMessage);
-    document.body.appendChild(frame);
-    document.body.appendChild(form);
-    try{form.submit();}
-    catch(error){finish(reject,error);}
-  });
+      if(!res.ok)throw new Error("HTTP "+res.status);
+      return res.text(); // baca sebagai text dulu agar tidak crash jika bukan JSON
+    })
+    .then(text=>{
+      let data;
+      try{data=JSON.parse(text);}
+      catch(_){
+        // Apps Script kadang return HTML error page — tampilkan 100 char pertama
+        const preview=text.replace(/<[^>]+>/g,"").trim().slice(0,120);
+        throw new Error("Response bukan JSON. Cek deployment Apps Script.\n"+preview);
+      }
+      if(!data||!data.ok)throw new Error(data&&data.error?data.error:"Apps Script mengembalikan {ok:false}.");
+      return data;
+    })
+    .catch(err=>{
+      clearTimeout(timeoutId);
+      if(err.name==="AbortError")throw new Error("Timeout — periksa URL deployment dan akses Google.");
+      console.error("[SheetsAPI]",action,err.message);
+      throw err;
+    });
 }
 
 function persist(){
