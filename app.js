@@ -1845,9 +1845,29 @@ function bindGlobal(){
   });
   $("#modalClose")&&($("#modalClose").onclick=()=>$("#modal").close());
   document.addEventListener('click',e=>{if(e.target.id==='cancelModal')$("#modal").close()});
+  $("#themeToggle")&&($("#themeToggle").onclick=toggleTheme);  
 }
 
+
 /* ============ BOOT ============ */
+const THEME_KEY="okcenter_theme";
+function applyTheme(theme){
+  document.documentElement.setAttribute("data-theme",theme);
+  const btn=document.getElementById("themeToggle");
+  if(btn)btn.textContent=theme==="light"?"🌙":"☀️";
+}
+function initTheme(){
+  const saved=localStorage.getItem(THEME_KEY);
+  const prefersDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved||(prefersDark?"dark":"light"));
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute("data-theme")||"dark";
+  const next=cur==="dark"?"light":"dark";
+  applyTheme(next);
+  localStorage.setItem(THEME_KEY,next);
+}
+initTheme();
 if(!isLoggedIn()){
   renderLogin();
 }else{
