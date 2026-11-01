@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Data Operasi & OK Center</title>
-<meta name="theme-color" content="#6ee7d7">
+<meta name="theme-color" content="#14b8a6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -20,44 +20,85 @@
   </div>
   <div class="nav-scroll">
     <div class="nav-group"><div class="nav-label">UTAMA</div>
-      <button class="nav-item active" data-page="dashboard">⌂ <span>Dashboard</span></button>
+      <button class="nav-item active" data-page="dashboard">
+        <span class="nav-icon" data-cat="dashboard">⌂</span><span>Dashboard</span>
+      </button>
     </div>
     <div class="nav-group"><div class="nav-label">DATA OPERASI</div>
-      <button class="nav-item" data-page="input">＋ <span>Input Operasi</span></button>
-      <button class="nav-item" data-page="operations">▤ <span>Daftar Operasi</span></button>
-      <button class="nav-item" data-page="import">⇩ <span>Import Excel/CSV</span></button>
+      <button class="nav-item" data-page="input">
+        <span class="nav-icon" data-cat="operasi">＋</span><span>Input Operasi</span>
+      </button>
+      <button class="nav-item" data-page="operations">
+        <span class="nav-icon" data-cat="operasi">▤</span><span>Daftar Operasi</span>
+      </button>
+      <button class="nav-item" data-page="import">
+        <span class="nav-icon" data-cat="operasi">⇩</span><span>Import Excel/CSV</span>
+      </button>
     </div>
     <div class="nav-group"><div class="nav-label">DOKUMEN</div>
-      <button class="nav-item" data-page="notadinas">✉ <span>Nota Dinas</span></button>
+      <button class="nav-item" data-page="notadinas">
+        <span class="nav-icon" data-cat="dokumen">✉</span><span>Nota Dinas</span>
+      </button>
     </div>
     <div class="nav-group"><div class="nav-label">MASTER DATA</div>
-      <button class="nav-item" data-page="employees">♙ <span>Data Pegawai</span></button>
+      <button class="nav-item" data-page="employees">
+        <span class="nav-icon" data-cat="master">♙</span><span>Data Pegawai</span>
+      </button>
     </div>
     <div class="nav-group"><div class="nav-label">INVENTARIS OK</div>
-      <button class="nav-item" data-page="inventory">▤ <span>Inventaris</span></button>
+      <button class="nav-item" data-page="inventory">
+        <span class="nav-icon" data-cat="inventaris">▤</span><span>Inventaris</span>
+      </button>
     </div>
     <div class="nav-group"><div class="nav-label">ALKES</div>
-      <button class="nav-item" data-page="stock">▥ <span>Stok Alkes</span></button>
-      <button class="nav-item" data-page="stockin">＋ <span>Barang Masuk</span></button>
-      <button class="nav-item" data-page="stockout">− <span>Barang Keluar</span></button>
-      <button class="nav-item" data-page="shortage">! <span>Kekurangan</span></button>
-      <button class="nav-item" data-page="requests">▱ <span>Permintaan</span></button>
+      <button class="nav-item" data-page="stock">
+        <span class="nav-icon" data-cat="alkes">▥</span><span>Stok Alkes</span>
+      </button>
+      <button class="nav-item" data-page="stockin">
+        <span class="nav-icon" data-cat="alkes">↧</span><span>Barang Masuk</span>
+      </button>
+      <button class="nav-item" data-page="stockout">
+        <span class="nav-icon" data-cat="alkes">↥</span><span>Barang Keluar</span>
+      </button>
+      <button class="nav-item" data-page="shortage">
+        <span class="nav-icon" data-cat="alkes">!</span><span>Kekurangan</span>
+      </button>
+      <button class="nav-item" data-page="requests">
+        <span class="nav-icon" data-cat="alkes">▱</span><span>Permintaan</span>
+      </button>
     </div>
     <div class="nav-group"><div class="nav-label">LAPORAN</div>
-      <button class="nav-item" data-page="daily">▤ <span>Operasi Harian</span></button>
-      <button class="nav-item" data-page="monthly">▤ <span>Operasi Bulanan</span></button>
-      <button class="nav-item" data-page="bedah">▦ <span>Bedah</span></button>
-      <button class="nav-item" data-page="anestesi">◉ <span>Anestesi</span></button>
-      <button class="nav-item" data-page="inventory-report">▤ <span>Inventaris</span></button>
-      <button class="nav-item" data-page="alkes-report">▥ <span>Alkes</span></button>
+      <button class="nav-item" data-page="daily">
+        <span class="nav-icon" data-cat="laporan">◱</span><span>Operasi Harian</span>
+      </button>
+      <button class="nav-item" data-page="monthly">
+        <span class="nav-icon" data-cat="laporan">◳</span><span>Operasi Bulanan</span>
+      </button>
+      <button class="nav-item" data-page="bedah">
+        <span class="nav-icon" data-cat="laporan">⚕</span><span>Bedah</span>
+      </button>
+      <button class="nav-item" data-page="anestesi">
+        <span class="nav-icon" data-cat="laporan">◉</span><span>Anestesi</span>
+      </button>
+      <button class="nav-item" data-page="inventory-report">
+        <span class="nav-icon" data-cat="laporan">▤</span><span>Inventaris</span>
+      </button>
+      <button class="nav-item" data-page="alkes-report">
+        <span class="nav-icon" data-cat="laporan">▥</span><span>Alkes</span>
+      </button>
     </div>
     <div class="nav-group admin-only"><div class="nav-label">PENGATURAN</div>
-      <button class="nav-item" data-page="settings">⚙ <span>Backup & Restore</span></button>
-      <button class="nav-item" data-page="reset">↺ <span>Reset Data</span></button>
+      <button class="nav-item" data-page="settings">
+        <span class="nav-icon" data-cat="pengaturan">⚙</span><span>Backup & Restore</span>
+      </button>
+      <button class="nav-item" data-page="reset">
+        <span class="nav-icon" data-cat="pengaturan">↺</span><span>Reset Data</span>
+      </button>
     </div>
   </div>
-  <div class="sidebar-foot">Data Operasi & OK Center<br><small>Local data • siap dihubungkan Laravel + MySQL</small></div>
+  <div class="sidebar-foot">Data Operasi & OK Center<br><small>intern only not publised</small></div>
 </aside>
+
 <main class="main">
 <header class="topbar">
   <div class="top-left">
@@ -70,15 +111,17 @@
     </div>
   </div>
   <div class="top-actions">
-    <span class="status-dot" id="syncStatus">● Memuat...</span>
+    <span class="status-dot" id="syncStatus">Memuat...</span>
     <a id="sheetLink" href="#" target="_blank" hidden style="font-size:12px;color:inherit;opacity:0.7;"></a>
-    <button class="primary" data-page-jump="input">＋ Input Operasi</button>
-    <button class="ghost" id="logoutBtn">⏻ Logout</button>
+    <button class="theme-toggle" id="themeToggle" title="Ganti tema">TERANG</button>
+    <button class="primary" data-page-jump="input">＋ Input</button>
+    <button class="ghost" id="logoutBtn">Logout</button>
   </div>
 </header>
 <div id="pages"></div>
 </main>
 </div>
+
 <div id="toast"></div>
 <dialog id="modal">
   <div class="modal-card">
