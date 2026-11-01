@@ -166,20 +166,15 @@ function callSheetsApi(action,payload={}){
 
   const controller=new AbortController();
   const timeoutId=setTimeout(()=>controller.abort(),60000);
-
-  // Selalu sertakan action di URL query param agar tetap ada setelah redirect 302
-  // yang dilakukan Apps Script (redirect mengubah POST → GET dan body hilang).
-  // Untuk "save": kirim payload sebagai body text/plain (simple request, no preflight).
-  // Untuk "read": cukup GET biasa.
+  
   let fetchPromise;
   if(action==="read"){
     const url=new URL(GOOGLE_SHEETS_API_URL);
     url.searchParams.set("action","read");
     fetchPromise=fetch(url.toString(),{method:"GET",signal:controller.signal});
   }else{
-    // text/plain tidak trigger CORS preflight & payload-nya aman lewat redirect
     const url=new URL(GOOGLE_SHEETS_API_URL);
-    url.searchParams.set("action",action); // action di URL agar selamat dari redirect
+    url.searchParams.set("action",action); 
     fetchPromise=fetch(url.toString(),{
       method:"POST",
       headers:{"Content-Type":"text/plain;charset=UTF-8"},
@@ -192,13 +187,13 @@ function callSheetsApi(action,payload={}){
     .then(res=>{
       clearTimeout(timeoutId);
       if(!res.ok)throw new Error("HTTP "+res.status);
-      return res.text(); // baca sebagai text dulu agar tidak crash jika bukan JSON
+      return res.text();
     })
     .then(text=>{
       let data;
       try{data=JSON.parse(text);}
       catch(_){
-        // Apps Script kadang return HTML error page — tampilkan 100 char pertama
+        
         const preview=text.replace(/<[^>]+>/g,"").trim().slice(0,120);
         throw new Error("Response bukan JSON. Cek deployment Apps Script.\n"+preview);
       }
@@ -220,7 +215,6 @@ function persist(){
 
   if(!cloudMode||!cloudReady)return Promise.resolve({local:true});
 
-  // Antrikan penyimpanan agar urutan klik tidak menyebabkan data tertimpa.
   cloudSaveQueue=cloudSaveQueue.catch(()=>{}).then(()=>
     callSheetsApi("save",{state:snapshot,expectedRevision:cloudRevision})
       .then(result=>{
@@ -255,14 +249,12 @@ function initCloudDatabase(){
       }
 
       if(result.hasData){
-        // Google Sheets menjadi sumber data utama setelah berhasil terhubung.
         state=normalizeStateData(result.state||{});
         try{localStorage.setItem(STORE,JSON.stringify(state));}catch(error){}
         cloudReady=true;
         setSyncStatus("Terhubung ke Google Sheets",result.spreadsheetUrl||"");
         navigate("dashboard");
       }else{
-        // Database baru: isi awal dari data lokal/default aplikasi.
         cloudReady=true;
         setSyncStatus("Menyiapkan database Google Sheets...");
         persist().then(()=>{
@@ -276,7 +268,6 @@ function initCloudDatabase(){
       cloudReady=false;
       setSyncStatus("Koneksi Google Sheets gagal",message);
       toast("Database Google Sheets belum dapat diakses: "+message);
-      // Aplikasi tetap terbuka dengan backup lokal; status menunjukkan belum sinkron.
       navigate("dashboard");
     });
 }
@@ -434,7 +425,7 @@ function renderDashboard(){
   let low=countLow();
   let recent=todayOps.slice().reverse().slice(0,10);
   return `<div class="page">
-  <div class="hero"><h2>Data Operasi & OK Center</h2><p>Kelola operasi, kamar operasi, pegawai, inventaris, alkes, stok, permintaan, nota dinas, dan laporan dalam satu dashboard.</p></div>
+  <div class="hero"><h2>Data Operasi & OK Center</h2><p>Distribusi Data</p></div>
   <div class="stats">
     <div class="stat-card"><span>Total Operasi</span><strong>${ops.length}</strong><small>seluruh data operasi</small></div>
     <div class="stat-card"><span>Operasi Hari Ini</span><strong>${todayOps.length}</strong><small>${today()}</small></div>
@@ -1577,12 +1568,9 @@ function resolveField(h){
   let n=normHeader(h);
   if(!n||ignoredHeaders.includes(n))return null;
 
-  // 1. Exact match prioritas utama
   for(let f of fields){
     if(aliases[f]&&aliases[f].some(a=>normHeader(a)===n))return f;
   }
-
-  // 2. Phrase matching terpanjang (lebih spesifik)
   let best=null, bestLen=0;
   for(let f of fields){
     if(!aliases[f])continue;
@@ -1591,7 +1579,7 @@ function resolveField(h){
       if(!na)continue;
       let matched=false;
       if(na.length<=3){
-        // Alias pendek (<= 3 karakter) harus match per kata utuh
+      
         matched=new RegExp('(^|\\s)'+na+'(\\s|$)').test(n);
       }else{
         matched=n.includes(na);
@@ -1669,12 +1657,12 @@ async function readSheet(file){
     let aoa=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:false});
     if(!aoa||!aoa.length)continue;
 
-    // Deteksi CSV semicolon (jika semua kolom masuk ke 1 string)
+
     if(aoa.length&&aoa[0].length===1&&String(aoa[0][0]).includes(';')){
       aoa=aoa.map(row=>String(row[0]||'').split(';'));
     }
 
-    // Cari baris header pada 30 baris pertama
+ 
     for(let i=0;i<Math.min(aoa.length,30);i++){
       let rowHeader=aoa[i];
       if(!rowHeader||!rowHeader.length)continue;
