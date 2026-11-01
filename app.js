@@ -140,10 +140,6 @@ function normalizeStateData(raw){
   return data;
 }
 
-/*
- * GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE APPS SCRIPT YANG BERAKHIR /exec.
- * Contoh: https://script.google.com/macros/s/AKfycbxxxxxxxx/exec
- */
 const GOOGLE_SHEETS_API_URL="https://script.google.com/macros/s/AKfycbygp3ff0lOjRCG2lRt00HsntL1TzMlMxN0piutvq-RBf4cxeN9LxewEDCboXfTNNjQv/exec";
 const API_MESSAGE_CHANNEL="OKCENTER_SHEETS_API";
 const cloudMode=/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(GOOGLE_SHEETS_API_URL);
@@ -165,12 +161,6 @@ function setSyncStatus(message,detail=""){
   }
 }
 
-/*
- * Komunikasi ke Google Apps Script menggunakan fetch() dengan metode GET (read)
- * dan POST (save). Apps Script harus mengembalikan JSON dengan header CORS.
- * Fallback: jika fetch gagal karena redirect CORS (Apps Script kadang redirect),
- * coba ulang dengan no-cors + polling tidak didukung — gunakan GET params saja.
- */
 function callSheetsApi(action,payload={}){
   if(!cloudMode){return Promise.reject(new Error("URL Google Apps Script belum dipasang di app.js."));}
 
